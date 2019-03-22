@@ -45,6 +45,8 @@ Options:
                 in the KUBECONFIG file which is generated for remote cluster
                 access.
               * Setting this must be exclusive of '--local-only'
+  -i=<string> --proto=<string>
+              * Specifies IPV4 or IPV6 mode. Either 'ipv4' (default) or 'ipv6'
   -p=<string> --pod-network-cidr=<string>
               * Specify range of IP addresses for the pod network. If set, the
                 control plane will automatically allocate CIDRs for every node.
@@ -79,6 +81,10 @@ function main() {
                 APISERVER_CERT_EXTRA_SANS="${i#*=}"
                 shift # past argument=value
                 ;;
+            -i=*|--proto=*)
+                IP_PROTO="${i#*=}"
+                shift # past argument=value
+                ;;
             -p=*|--pod-network-cidr=*)
                 POD_NETWORK_CIDR="${i#*=}"
                 shift # past argument=value
@@ -111,6 +117,7 @@ function main() {
     # Set default values if unset (compatible with ENV vars)
     LOCAL_ONLY=${LOCAL_ONLY:-false}
     APISERVER_CERT_EXTRA_SANS=${APISERVER_CERT_EXTRA_SANS:-}
+    IP_PROTO=${IP_PROTO:-ipv4}
     POD_NETWORK_CIDR=${POD_NETWORK_CIDR:-10.244.0.0/16}
     CONTAINER_NETWORK_INTERFACE=${CONTAINER_NETWORK_INTERFACE:-calico}
     DOTFILES=${DOTFILES:-false}
@@ -120,6 +127,7 @@ function main() {
     echo "Current Settings"
     echo "  LOCAL_ONLY=${LOCAL_ONLY}"
     echo "  APISERVER_CERT_EXTRA_SANS=${APISERVER_CERT_EXTRA_SANS}"
+    echo "  IP_PROTO=${IP_PROTO}"
     echo "  POD_NETWORK_CIDR=${POD_NETWORK_CIDR}"
     echo "  CONTAINER_NETWORK_INTERFACE=${CONTAINER_NETWORK_INTERFACE}"
     echo "  DOTFILES=${DOTFILES}"
@@ -160,6 +168,9 @@ function main() {
 
     # Permanently disable swap, since kubernetes will not work with swap
     disable_swap
+
+    # Enable IPV4 and IPV6 forwarding
+    enable_forwarding
 
     # Install Docker only if not already installed
     if ! command -v docker; then
@@ -229,6 +240,11 @@ function disable_swap() {
 
     # Disable swap in the currently running OS
     swapoff -a
+}
+
+function enable_forwarding() {
+    sysctl -w net.ipv4.ip_forward=1
+    sysctl -w net.ipv6.conf.all.forwarding=1
 }
 
 function install_docker() {

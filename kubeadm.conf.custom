@@ -1,4 +1,14 @@
+# APIS: https://godoc.org/k8s.io/kubernetes/cmd/kubeadm/app/apis/kubeadm
+apiVersion: kubeadm.k8s.io/v1beta1
+kind: InitConfiguration
+# Needed for IPV6
+localAPIEndpoint:
+  advertiseAddress: "fd00::101"
+
+---
 # Created with: kubeadm config view
+apiVersion: kubeadm.k8s.io/v1beta1
+kind: ClusterConfiguration
 apiServer:
   certSANs:
   - api.kube1.example.com
@@ -9,7 +19,6 @@ apiServer:
     oidc-username-claim: email
     oidc-groups-claim: groups
   timeoutForControlPlane: 4m0s
-apiVersion: kubeadm.k8s.io/v1beta1
 certificatesDir: /etc/kubernetes/pki
 clusterName: kubernetes
 controlPlaneEndpoint: ""
@@ -20,10 +29,12 @@ etcd:
   local:
     dataDir: /var/lib/etcd
 imageRepository: k8s.gcr.io
-kind: ClusterConfiguration
-kubernetesVersion: v1.13.0
+kubernetesVersion: v1.13.4
 networking:
   dnsDomain: cluster.local
-  podSubnet: 10.244.0.0/16
-  serviceSubnet: 10.96.0.0/12
+# Needed for IPV6
+  serviceSubnet: fd00:ffff::/110
+  podSubnet: fd00:1111::/110
+# podSubnet: 10.244.0.0/16
+# serviceSubnet: 10.96.0.0/12
 scheduler: {}

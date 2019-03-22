@@ -5,11 +5,12 @@
 # Settings
 
 $memory = 4096  # In megabytes
-$cpus   = 4
+$cpus   = 1
 $fqdn = "api.kube1.example.com"  # Set this if you will access the kube cluster remotely (e.g. "api.kube1.example.com")
-$public = false  # Public networking (true). Host/private networking (false).
+$public = true  # Public networking (true). Host/private networking (false).
 $public_macaddress = "0AE000000001"  # Pin to a local mac address for Static DHCP assignment
 $private_ip = "192.168.33.10"
+$proto = "ipv6"  # (ipv4|ipv6) Set this to enable ipv6
 
 # All Vagrant configuration is done below. The "2" in Vagrant.configure
 # configures the configuration version (we support older styles for
@@ -104,21 +105,37 @@ Vagrant.configure("2") do |config|
   config.vm.provision "shell",
                       privileged: false,
                       run: "always",
-                      args: "$sans",
+                      args: "\"$sans\" $ipv6",
                       inline: <<-SHELL
+
+    echo fqdn "$1"
+    echo ipv  "$2"
+    exit 0
+    
     # Fix line endins for Windows machines
     sudo apt-get install -y dos2unix
     pushd /vagrant
     dos2unix kubeadm-one
 
-    # Launch the setup script
+    # Calculate the setup script parameters
+    cmd="sudo ./kubeadm-one --dotfiles --force"
     if [[ -z "$1" ]]; then
-      sudo ./kubeadm-one --dotfiles --force --local-only
+      cmd="$cmd --local-only"
     else
-      sudo ./kubeadm-one --dotfiles --force --apiserver-cert-extra-sans="$1"
+      cmd="$cmd --apiserver-cert-extra-sans=\\"$1\\""
     fi
+
+    if [[ "$2" = "ipv6" ]]; then
+      cmd="$cmd --proto=ipv6 --pod-network-cidr=\\"fd00:1111::/110\\""
+    else
+      cmd="$cmd --proto=ipv4"
+    fi
+
+    # Launch the setup script
+    $cmd
 
     # Copy the remote KUBECONFIG to a host-accessible directory.
     cp -f ~/.kube/config.remote .
+
   SHELL
 end
