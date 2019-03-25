@@ -130,7 +130,7 @@ Vagrant.configure("2") do |config|
     fi
 
     if [[ "$2" = "ipv6" ]]; then
-      cmd="$cmd --ip-proto=ipv6 --pod-network-cidr=\\"fd00:1111::/110\\""
+      cmd="$cmd --ip-proto=ipv6"
     else
       cmd="$cmd --ip-proto=ipv4"
     fi

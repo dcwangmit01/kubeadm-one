@@ -1,9 +1,11 @@
-# APIS: https://godoc.org/k8s.io/kubernetes/cmd/kubeadm/app/apis/kubeadm
+# APIS: https://godoc.org/k8s.io/kubernetes/cmd/kubeadm/app/apis/kubeadm/v1beta1
+
 apiVersion: kubeadm.k8s.io/v1beta1
 kind: InitConfiguration
+
 # Needed for IPV6
-localAPIEndpoint:
-  advertiseAddress: "fd00::101"
+# localAPIEndpoint:
+#   advertiseAddress: "fd00::101"
 
 ---
 # Created with: kubeadm config view
@@ -13,6 +15,11 @@ apiServer:
   certSANs:
   - api.kube1.example.com
   extraArgs:
+    # will default to address of the default ipv6 interface
+    advertise-address: 2607:f598:b69a:fe1:8e0:ff:fe00:1
+    bind-address: "::"
+    # TODO: This may conflict with cluster-cidr, should probably be non-overlapping
+    service-cluster-ip-range: fd00::2:0/112
     authorization-mode: Node,RBAC
     oidc-issuer-url: https://dex.kube1.example.com/
     oidc-client-id: gangway.kube1.example.com
@@ -22,21 +29,39 @@ apiServer:
 certificatesDir: /etc/kubernetes/pki
 clusterName: kubernetes
 controlPlaneEndpoint: ""
-controllerManager: {}
+controllerManager:
+  extraArgs:
+    master: "::1"
+    cluster-cidr: fd00::0:0/96
 dns:
   type: CoreDNS
 etcd:
   local:
     dataDir: /var/lib/etcd
 imageRepository: k8s.gcr.io
-kubernetesVersion: v1.13.4
+kubelet:
+  extraArgs:
+    address: "::"
+    ## TODO: Specify
+    # cluster-dns:
+    # node-ip:
+kubeProxy:
+  extraArgs:
+    bind-address: "::"
+    master: "::1"
+    cluster-cidr: fd00::0:0/96
+kubernetesVersion: v1.14.0
 networking:
   dnsDomain: cluster.local
-#######################################
-# IPV6 vs IPV4
-# Needed for IPV6
-  serviceSubnet: fd00:ffff::/110
-  podSubnet: fd00:1111::/110
-# podSubnet: 10.244.0.0/16
-# serviceSubnet: 10.96.0.0/12
-scheduler: {}
+  #######################################
+  ## IPV6 vs IPV4
+  ## Needed for IPV6
+  podSubnet: fd00::1:0/112
+  serviceSubnet: fd00::2:0/112
+  ## Needed for IPV4
+  # podSubnet: 10.244.0.0/16
+  # serviceSubnet: 10.96.0.0/12
+scheduler:
+  extraArgs:
+    master: "::1"
+

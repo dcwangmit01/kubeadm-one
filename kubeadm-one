@@ -118,7 +118,18 @@ function main() {
     LOCAL_ONLY=${LOCAL_ONLY:-false}
     APISERVER_CERT_EXTRA_SANS=${APISERVER_CERT_EXTRA_SANS:-}
     IP_PROTO=${IP_PROTO:-ipv4}
-    POD_NETWORK_CIDR=${POD_NETWORK_CIDR:-10.244.0.0/16}
+    if [[ IP_PROTO = "ipv6" ]]; then
+	# 112 bit is a 16 bit network
+	CLUSTER_NETWORK_CIDR=${CLUSTER_NETWORK_CIDR:-fd00::0:0/96}
+	POD_NETWORK_CIDR=${POD_NETWORK_CIDR:-fd00::1:0/112}
+	SVC_NETWORK_CIDR=${SVC_NETWORK_CIDR:-fd00::2:0/112}
+	LOCAL_ADDR="::/1"
+    else
+	# CLUSTER_NETWORK_CIDR=${CLUSTER_NETWORK_CIDR:-10/8}
+	POD_NETWORK_CIDR=${POD_NETWORK_CIDR:-10.244.0.0/16}
+	SVC_NETWORK_CIDR=${SVC_NETWORK_CIDR:-10.244.1.0/16}
+	LOCAL_ADDR="127.0.0.1"
+    fi
     CONTAINER_NETWORK_INTERFACE=${CONTAINER_NETWORK_INTERFACE:-calico}
     DOTFILES=${DOTFILES:-false}
     FORCE=${FORCE:-false}
@@ -129,6 +140,8 @@ function main() {
     echo "  APISERVER_CERT_EXTRA_SANS=${APISERVER_CERT_EXTRA_SANS}"
     echo "  IP_PROTO=${IP_PROTO}"
     echo "  POD_NETWORK_CIDR=${POD_NETWORK_CIDR}"
+    echo "  SVC_NETWORK_CIDR=${SVC_NETWORK_CIDR}"
+    echo "  LOCAL_ADDR=${LOCAL_ADDR}"
     echo "  CONTAINER_NETWORK_INTERFACE=${CONTAINER_NETWORK_INTERFACE}"
     echo "  DOTFILES=${DOTFILES}"
     echo "  FORCE=${FORCE}"
@@ -218,6 +231,11 @@ function main() {
 function install_system_conveniences() {
     apt-get -y update
 
+    # Install git
+    if ! command -v git; then
+        apt-get -y install git
+    fi
+
     # Install a basic editor
     if ! command -v emacs; then
         apt-get -y install emacs-nox
@@ -267,7 +285,7 @@ function install_docker() {
         stable"
 
     ## Install docker.
-    apt-get update && apt-get install -y docker-ce=18.06.0~ce~3-0~ubuntu
+    apt-get update && apt-get install -y docker-ce=5:18.09.3~3-0~ubuntu-bionic
 
     # Setup daemon.
     cat > /etc/docker/daemon.json <<EOF
@@ -297,20 +315,29 @@ function install_kubernetes_services() {
 deb https://apt.kubernetes.io/ kubernetes-xenial main
 EOF
     apt-get update
-    apt-get install -y kubelet kubeadm kubectl
-    apt-mark hold kubelet kubeadm kubectl
+    apt-get install -y kubelet kubeadm kubectl kubernetes-cni
+    apt-mark hold kubelet kubeadm kubectl kubernetes-cni
 
     # The kubelet is now restarting every few seconds, as it waits in a crashloop for kubeadm to tell it what to do.
 }
 
 function initialize_kubeadm() {
+
+    env
+    echo "POD_NETWORK_CIDR: $POD_NETWORK_CIDR"
+    echo "SVC_NETWORK_CIDR: $SVC_NETWORK_CIDR"
+    echo "initialize_kubeadm: " $@
+
     # Pull all images
     kubeadm config images pull
 
+    exit 0
+
     if [[ -f "kubeadm.conf" ]]; then
         # If a kubeadm configuration file exists, use it and ignore all other settings
-        echo "Using existing kubeadm.conf file"
+        echo "Using existing kubeadm.conf file"	
         kubeadm init --ignore-preflight-errors=NumCPU --config kubeadm.conf
+	exit 0
     else
         # Else, use the command line args
 
