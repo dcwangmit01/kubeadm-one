@@ -4,3 +4,17 @@ kubeadm init \
   --apiserver-cert-extra-sans "2607:f598:b69a:fe1:8e0:ff:fe00:1,::1" \
   --pod-network-cidr "fd00::1:0/112" \
   --service-cidr "fd00::2:0/112"
+
+# Test
+sudo mkdir -p /home/vagrant/.kube
+sudo cp /etc/kubernetes/admin.conf /home/vagrant/.kube/config
+sudo chown -R vagrant:vagrant /home/vagrant/.kube
+kubectl get no -o wide
+kubectl get po --all-namespaces -o wide
+
+export pod_network_cidr="fd00::1:0/112"
+cat calico.yaml | \
+  sed "s@192.168.0.0/16@$pod_network_cidr@g" | \
+  kubectl apply -f -
+
+kubectl apply -f calico.yaml
