@@ -32,6 +32,8 @@ imageRepository: k8s.gcr.io
 kubernetesVersion: v1.13.4
 networking:
   dnsDomain: cluster.local
+#######################################
+# IPV6 vs IPV4
 # Needed for IPV6
   serviceSubnet: fd00:ffff::/110
   podSubnet: fd00:1111::/110

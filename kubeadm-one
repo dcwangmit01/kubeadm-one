@@ -45,7 +45,7 @@ Options:
                 in the KUBECONFIG file which is generated for remote cluster
                 access.
               * Setting this must be exclusive of '--local-only'
-  -i=<string> --proto=<string>
+  -i=<string> --ip-proto=<string>
               * Specifies IPV4 or IPV6 mode. Either 'ipv4' (default) or 'ipv6'
   -p=<string> --pod-network-cidr=<string>
               * Specify range of IP addresses for the pod network. If set, the
@@ -81,7 +81,7 @@ function main() {
                 APISERVER_CERT_EXTRA_SANS="${i#*=}"
                 shift # past argument=value
                 ;;
-            -i=*|--proto=*)
+            -i=*|--ip-proto=*)
                 IP_PROTO="${i#*=}"
                 shift # past argument=value
                 ;;

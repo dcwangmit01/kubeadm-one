@@ -12,6 +12,14 @@ $public_macaddress = "0AE000000001"  # Pin to a local mac address for Static DHC
 $private_ip = "192.168.33.10"
 $proto = "ipv6"  # (ipv4|ipv6) Set this to enable ipv6
 
+$sans = ""
+if $public == true
+  $sans = $fqdn
+else
+  $sans = $fqdn + ',' + $private_ip
+end
+
+
 # All Vagrant configuration is done below. The "2" in Vagrant.configure
 # configures the configuration version (we support older styles for
 # backwards compatibility). Please don't change it unless you know what
@@ -45,7 +53,6 @@ Vagrant.configure("2") do |config|
   # using a specific IP.
   if $public == false
     config.vm.network "private_network", ip: $private_ip
-    $sans = $fqdn + ',' + $private_ip
   end
 
   # Create a public network, which generally matched to bridged network.
@@ -72,7 +79,6 @@ Vagrant.configure("2") do |config|
     vb.cpus = $cpus
     if $public
       override.vm.network "public_network", :mac => $public_macaddress
-      $sans = $fqdn
     end
   end
 
@@ -105,14 +111,12 @@ Vagrant.configure("2") do |config|
   config.vm.provision "shell",
                       privileged: false,
                       run: "always",
-                      args: "\"$sans\" $ipv6",
+                      args: [ $sans, $proto ],
                       inline: <<-SHELL
 
-    echo fqdn "$1"
-    echo ipv  "$2"
-    exit 0
-    
-    # Fix line endins for Windows machines
+    echo "Provision called with args: " $@
+
+    # Fix line endings for Windows machines
     sudo apt-get install -y dos2unix
     pushd /vagrant
     dos2unix kubeadm-one
@@ -126,9 +130,9 @@ Vagrant.configure("2") do |config|
     fi
 
     if [[ "$2" = "ipv6" ]]; then
-      cmd="$cmd --proto=ipv6 --pod-network-cidr=\\"fd00:1111::/110\\""
+      cmd="$cmd --ip-proto=ipv6 --pod-network-cidr=\\"fd00:1111::/110\\""
     else
-      cmd="$cmd --proto=ipv4"
+      cmd="$cmd --ip-proto=ipv4"
     fi
 
     # Launch the setup script
