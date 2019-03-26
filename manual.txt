@@ -5,6 +5,7 @@ kubeadm init \
   --pod-network-cidr "fd00::1:0/112" \
   --service-cidr "fd00::2:0/112"
 
+
 # Test
 sudo mkdir -p /home/vagrant/.kube
 sudo cp /etc/kubernetes/admin.conf /home/vagrant/.kube/config
@@ -12,9 +13,34 @@ sudo chown -R vagrant:vagrant /home/vagrant/.kube
 kubectl get no -o wide
 kubectl get po --all-namespaces -o wide
 
+kubectl apply -f calico.yaml
+
 export pod_network_cidr="fd00::1:0/112"
 cat calico.yaml | \
   sed "s@192.168.0.0/16@$pod_network_cidr@g" | \
   kubectl apply -f -
 
 kubectl apply -f calico.yaml
+
+
+# Set docker IPV6
+cat << EOF | sudo tee /etc/docker/daemon.json
+{
+  "ipv6": true,
+  "fixed-cidr-v6": "2001:db8:1::/64"
+}
+EOF
+sudo systemctl reload docker
+
+
+# Manually correct all manifests
+
+sed -i 's@127.0.0.1@::1@g' /etc/kubernetes/manifests/*
+sed -i 's@//::1@//[::1]@g' /etc/kubernetes/manifests/*
+
+# Restart all pods except apiserver
+kubectl delete po $(kubectl get po --all-namespaces -o wide | awk '{print $2}'|grep -v NAME| grep -v apiserver) -n kube-system
+
+# Start busy
+kubectl run -it busybox --image=busybox --restart=Never sh
+

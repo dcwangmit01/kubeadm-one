@@ -32,6 +32,7 @@ data:
               "type": "calico-ipam"
               "assign_ipv4": "false",
               "assign_ipv6": "true",
+              "ipv4_pools": [],
               "ipv6_pools": ["fd00::1:0/112", "default-ipv6-ippool"]
           },
           "policy": {
@@ -588,6 +589,8 @@ spec:
               value: "autodetect"
             # Enable IPIP
             - name: CALICO_IPV4POOL_IPIP
+              value: "Never"
+            - name: CALICO_IPV6POOL_IPIP
               value: "Always"
             # Set MTU for tunnel device used if ipip is enabled
             - name: FELIX_IPINIPMTU
@@ -601,7 +604,7 @@ spec:
 #            - name: CALICO_IPV4POOL_CIDR
 #              value: "192.168.0.0/16"
             - name: CALICO_IPV6POOL_CIDR
-              value: "fd00::0:0/96"
+              value: "fd00::1:0/112"
             - name: IP6
               value: "autodetect"
             # Disable file logging so `kubectl logs` works.
